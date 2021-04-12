@@ -1,0 +1,560 @@
+#include <SPI.h>
+#include <Wire.h>
+#include <SFE_MicroOLED.h>
+#define PIN_RESET 9  // Connect RST to pin 9 (req. for SPI and I2C)
+#define PIN_DC    8  // Connect DC to pin 8 (required for SPI)
+#define PIN_CS    10 // Connect CS to pin 10 (required for SPI)
+//#define DC_JUMPER 0 // (I2C only) Set to either 0 or 1, matching the value of the DC Jumper
+
+//Buttons for snake to move
+const int BUTTONRIGHT = 2;
+const int BUTTONLEFT = 3;
+const int BUTTONDOWN = 4;
+const int BUTTONUP = 5;
+int counterX = 24;//head of snake
+int counterY = 37;//head of snake
+// Declare a MicroOLED object. The parameters include:
+// 1 - Reset pin: Any digital pin
+// 2 - D/C pin: Any digital pin (SPI mode only)
+// 3 - CS pin: Any digital pin (SPI mode only, 10 recommended)
+MicroOLED oled(PIN_RESET, PIN_DC, PIN_CS); // Example SPI Declaration
+//MicroOLED oled(PIN_RESET, DC_JUMPER); // Example I2C Declaration
+
+// Here we're creating a variable called "sensorPin" of type "int"
+// and initializing it to have the value "0," which is the analog input pin the pot is     //conected to.
+int sensorPin1 = 0;//life 1    
+int sensorPin2 = 0;//life 2
+int sensorPin3 = 0;//life 3 
+
+// Variable for storing the pin number that the LED is connected to                 
+int ledPin1 = 12;//where to connect the light   
+int ledPin2 = 6;//^^^^
+int ledPin3 = 1;//^^^^
+
+//all the counters
+int startgame = 0;//the counter to start the game
+int gameover = 0;//the counter to end the game
+int counterRight = 0;//when button is pressed it counts up
+int counterLeft = 0;//^^
+int counterDown = 0;//^^
+int counterUp = 0;//^^^^
+boolean RightGo = false;//if snake is going right or not
+boolean LeftGo = false;//if snake is going left or not
+boolean DownGo = false;//if snake is going down or not
+boolean UpGo = false;//if snake is going up or not depending on the boolean value
+int snakesize = 12;//size of the snake
+int snake[2000];//max snake size
+int RandomX = 10;//random int for the food
+int RandomY = 20;//^^^^
+int lives = 3;//3 lives
+
+void hitting()//if the snake is hitting the wall or its self
+{
+  if(counterX > 66 || counterY > 46 || counterX < 0 || counterY < 0)//if its hitting walls
+ {
+  lives = 0;//if it hits walls it dies automatically
+ }
+  int counterx = 0;//cords x for snake
+  int countery = 1;//cords y for snake
+  for(int counter = 0; counter < (snakesize-2)/2; counter++)
+  {
+    if((snake[counterx] == counterX) && (snake[countery] == counterY))//if snake hits itself minus 1 life
+    {
+      lives--;//minus 1 life
+    }
+   counterx = (counterx + 2);//add 2 to x counter
+   countery = (countery + 2);//add 2 to y counter
+  }
+}//end of void hitting();
+
+void food()//food for snake
+{
+    int oldsnakesize = snakesize;//size of snake before adding the extra 12
+    snakesize = (snakesize + 12);//adding 12 size to the snake
+    int temp[snakesize];//a temporary snake array
+    int lastx = snake[0];//the last x value of the snake
+    int lasty = snake[1];// the last y value of the snake
+    temp[0] = lastx;//setting the first 12 parts of the temporary snake to the last points of the real snake
+    temp[1] = lasty;
+    temp[2] = lastx;
+    temp[3] = lasty;
+    temp[4] = lastx;
+    temp[5] = lasty;
+    temp[6] = lastx;
+    temp[7] = lasty;
+    temp[8] = lastx;
+    temp[9] = lasty;
+    temp[10] = lastx;
+    temp[11] = lasty;//^^^^^^^^^^^^^
+    int tempcounter = 12;//the counter for the temp snake to copy the real snakes values
+      for(int counter = 0; counter < ((oldsnakesize)); counter++)//counting till it reaches the oldsnakesize
+      {
+      
+           temp[tempcounter] = snake[counter];//copying the snake values to the temp value
+           tempcounter++;//adding to the temp value
+      }
+      for(int counter = 0; counter < (snakesize); counter++)//counting till it reaches the real snakesize
+      {
+          snake[counter] = temp[counter];//replaces everything in snake to temp
+      }
+}// end food();
+
+void Move(String Direction)//direction depending on the button you press
+{
+  if(Direction == "Right")//if button right is pressed
+  {
+    int xcounter = 0;//x counter
+    int ycounter = 1;//y counter
+    int counterxx = 2;//the second x counter
+    int counteryy = 3;// the second y counter
+    counterX++;//adding a 1 to the x value to its going in the direction of right
+      for(int counter = 0; counter < snakesize/2; counter++)//counting from 0 to snakesize/2
+      {
+          snake[xcounter] = snake[counterxx];//replace 1st x value with next x value in the array
+          snake[ycounter] = snake[counteryy];//replace 1st y value with next x value in the array
+          oled.pixel(snake[xcounter], snake[ycounter]);//place a pixel down in the new spot
+          counterxx = (counterxx + 2);//adding to the counters
+          counteryy = (counteryy + 2);
+          xcounter = (xcounter + 2);
+          ycounter = (ycounter + 2);//^^^^
+      }
+    snake[snakesize-2] = counterX;//the head of snake is now added after the top is done calculating moving the entire array to the left with values
+    snake[snakesize-1] = counterY;
+    oled.display();//display the pixels that were added.
+    delay(100);//delay so it doesnt spam
+  }
+    if(Direction == "Down")//The same concept as (Direction == "Right")
+    {
+      int xcounter = 0;
+      int ycounter = 1;
+      int counterxx = 2;
+      int counteryy = 3;
+      counterY++;
+        for(int counter = 0; counter < snakesize/2; counter++)
+        {
+            snake[xcounter] = snake[counterxx];
+            snake[ycounter] = snake[counteryy];
+            oled.pixel(snake[xcounter], snake[ycounter]);
+            counterxx = (counterxx + 2);
+            counteryy = (counteryy + 2);
+            xcounter = (xcounter + 2);
+            ycounter = (ycounter + 2);
+        }
+      snake[snakesize-2] = counterX;
+      snake[snakesize-1] = counterY;
+      oled.display();
+      delay(100);
+  }
+  if(Direction == "Left")//The same concept as (Direction == "Right")
+  {
+    int xcounter = 0;
+    int ycounter = 1;
+    int counterxx = 2;
+    int counteryy = 3;
+    counterX--;
+       for(int counter = 0; counter < snakesize/2; counter++)
+        {
+            snake[xcounter] = snake[counterxx];
+            snake[ycounter] = snake[counteryy];
+            oled.pixel(snake[xcounter], snake[ycounter]);
+            counterxx = (counterxx + 2);
+            counteryy = (counteryy + 2);
+            xcounter = (xcounter + 2);
+            ycounter = (ycounter + 2);
+        }
+    snake[snakesize-2] = counterX;
+    snake[snakesize-1] = counterY;
+    oled.display();
+    delay(100);
+  }
+  if(Direction == "Up")//The same concept as (Direction == "Right")
+  {
+      int xcounter = 0;
+      int ycounter = 1;
+      int counterxx = 2;
+      int counteryy = 3;
+      counterY--;
+        for(int counter = 0; counter < snakesize/2; counter++)
+        {
+            snake[xcounter] = snake[counterxx];
+            snake[ycounter] = snake[counteryy];
+            oled.pixel(snake[xcounter], snake[ycounter]);
+            counterxx = (counterxx + 2);
+            counteryy = (counteryy + 2);
+            xcounter = (xcounter + 2);
+            ycounter = (ycounter + 2);
+        }
+      snake[snakesize-2] = counterX;
+      snake[snakesize-1] = counterY;
+      oled.display();
+      delay(100);
+  }
+}//end of Move();
+
+void setup()
+{
+  //set ledPin (12) as an OUTPUT
+  pinMode(ledPin1, OUTPUT);//setting up for the red lights to be outputs
+  //set ledPin (6) as an OUTPUT
+  pinMode(ledPin2, OUTPUT);
+  //set ledPin (1) as an OUTPUT
+  pinMode(ledPin3, OUTPUT);
+  
+  //buttons to be an input
+  pinMode(BUTTONRIGHT, INPUT);//right button
+  pinMode(BUTTONLEFT, INPUT);//left button
+  pinMode(BUTTONDOWN, INPUT);//down button
+  pinMode(BUTTONUP, INPUT);//up button
+
+  randomSeed(analogRead(5));//makes it more random when using random();
+  // Before you can start using the OLED, call begin() to init
+  // all of the pins and configure the OLED.
+  oled.begin();
+  //for printing(debug tool)
+  Serial.begin(9600);
+  //array snake beginning
+  snake[0] = 24 ;//adding the first part of the body(begging snake)
+  snake[1] = 32 ;
+  snake[2] = 24 ;
+  snake[3] = 33 ;
+  snake[4] = 24 ;
+  snake[5] = 34 ;
+  snake[6] = 24 ;
+  snake[7] = 35 ;
+  snake[8] = 24 ;
+  snake[9] = 36 ;
+  snake[10] = 24 ;
+  snake[11] = 37 ;
+}//end of setup();
+
+void loop()
+{
+  if(startgame == 0)//beggining starting screen
+  {
+   oled.clear(!ALL);//clears last screen
+   oled.setFontType(1);  // Set the text to medium (6 columns, 3 rows worth of characters)
+   oled.setCursor(0, 0);//sets the cursor to 0, 0
+   oled.print("Start  game,  press"); // Print a const string
+   oled.display(); // Draw to the screen
+   delay(2000);
+   oled.clear(!ALL);//clears last screen
+   oled.setCursor(0, 0);//sets the cursor to 0, 0 
+   oled.print("right  button"); // Print a const string
+   oled.display(); // Draw to the screen
+   delay(2000);
+   startgame = 1;//so that it doesnt constantly repeat the starting screen
+  }
+    hitting();//checks to make sure the snake is not hitting itself or the walls
+    //create a local variable (variable that can only be used inside of loop() to store       //a sensor value called sensorValue
+    int sensorValue1;
+    //create a local variable (variable that can only be used inside of loop() to store       //a sensor value called sensorValue
+    int sensorValue2;
+    //create a local variable (variable that can only be used inside of loop() to store       //a sensor value called sensorValue
+    int sensorValue3;
+
+    //use the analogRead() function to read sensorPin and store the value in sensorValue
+    sensorValue1 = analogRead(sensorPin1);    
+    //use the analogRead() function to read sensorPin and store the value in sensorValue
+    sensorValue2 = analogRead(sensorPin2);    
+    //use the analogRead() function to read sensorPin and store the value in sensorValue
+    sensorValue3 = analogRead(sensorPin3); 
+
+    if(lives == 3)//if you have 3 lives all 3 red lights are on
+    {
+      digitalWrite(ledPin3, HIGH);//HIGH makes the light turn on
+      digitalWrite(ledPin2, HIGH); 
+      digitalWrite(ledPin1, HIGH);  
+    }
+    if(lives == 2)//if you have 2 lives all 2 red lights are on
+    {
+      digitalWrite(ledPin3, LOW);//LOW makes the light turn off
+      digitalWrite(ledPin2, HIGH); 
+      digitalWrite(ledPin1, HIGH);  
+    }
+    if(lives == 1)//if you have 1 life all 1 red lights are on
+    {
+      digitalWrite(ledPin3, LOW);
+      digitalWrite(ledPin2, LOW); 
+      digitalWrite(ledPin1, HIGH);  
+    }
+
+    if(lives == 0)//if you have 0 lives iits none lit and a gameover
+    {
+      digitalWrite(ledPin3, LOW);
+      digitalWrite(ledPin2, LOW); 
+      digitalWrite(ledPin1, LOW);  
+    }
+  oled.clear(!ALL);//clears last screen
+  oled.rect(0, 0, LCDWIDTH, LCDHEIGHT);  // Draw a rectange around the screen as a barrier
+  oled.display(); // Draw to the screen
+  //food placement
+  oled.pixel(RandomX, RandomY);
+  oled.display();
+  //button stuff
+  // local variable to hold the pushbutton states
+  int buttonStateRight;
+  int buttonStateLeft;
+  int buttonStateDown;
+  int buttonStateUp;
+
+  //read the digital state of BUTTONPIN with digitalRead() function and store the           
+  //value in buttonState variable
+  buttonStateRight = digitalRead(BUTTONRIGHT);
+  buttonStateLeft = digitalRead(BUTTONLEFT);
+  buttonStateDown = digitalRead(BUTTONDOWN);
+  buttonStateUp = digitalRead(BUTTONUP);
+  
+ //button counters
+ if(RightGo == false && LeftGo == false)//if the button for going right is off and left is off then you can go right
+ {
+  if (buttonStateRight == LOW) //if the button is being pressed
+  {
+    counterRight++;//adds 1 to the counter
+    delay(150);
+  }
+ }
+ if(RightGo == false && LeftGo == false)//if the button for going left is off and right is off then you can go left
+ {
+    if (buttonStateLeft == LOW) 
+  {
+    counterLeft++;;
+    delay(150);
+  }
+ }
+ if(UpGo == false && DownGo == false)//if the button for going down is off and up is off then you can go down
+ {
+  if (buttonStateDown == LOW) 
+  {
+    counterDown++;
+    delay(150);
+  }
+ }
+ if(UpGo == false && DownGo == false)//if the button for going up is off and down is off then you can go up
+ {
+    if (buttonStateUp == LOW) 
+  {
+    counterUp++;
+    delay(150);
+  }
+ }//end of button counters
+ 
+  //what the counters do
+  if (counterRight == 1)
+  {
+    RightGo = true;//tells the snake that it go in this direction untill told otherwise by setting this false and setting another direction true
+    LeftGo = false;
+    DownGo = false;
+    UpGo = false;
+    Move("Right");//calls Move(); telling the snake to move Right
+    counterRight = 0;
+  }
+  
+  if (counterLeft == 1)
+  {
+    RightGo = false;
+    LeftGo = true;//tells the snake that it go in this direction untill told otherwise by setting this false and setting another direction true
+    DownGo = false;
+    UpGo = false;
+    Move("Left");//calls Move(); telling the snake to move Left
+    counterLeft = 0;
+  }
+  
+  if (counterUp == 1)
+  {
+    RightGo = false;
+    LeftGo = false;
+    DownGo = false;
+    UpGo = true; //tells the snake that it go in this direction untill told otherwise by setting this false and setting another direction true
+    Move("Up");//calls Move(); telling the snake to move Up
+    counterUp = 0;
+  }
+  
+  if (counterDown == 1)
+  {
+    RightGo = false;
+    LeftGo = false;
+    DownGo = true;//tells the snake that it go in this direction untill told otherwise by setting this false and setting another direction true
+    UpGo = false;
+    Move("Down");//calls Move(); telling the snake to move Down
+    counterDown = 0;
+  }//end of what counters do
+  
+   //snake code
+ if(lives > 0)//as long as you have more than 0 lives this happens
+ {
+   if (RightGo == true)//right movement of snake
+   {
+     RightGo = true;//tells the snake that it go in this direction untill told otherwise by setting this false and setting another direction true
+     LeftGo = false;
+     DownGo = false;
+     UpGo = false;
+    if (counterX == RandomX && counterY == RandomY)//checks if the snake is on the food
+    {
+        RandomX = random(65);//sets a new place for the food
+        RandomY = random(45);//sets a new place for the food
+        food();//calls on food(); making the snake grow
+    } 
+     int xcounter = 0;//x counter
+     int ycounter = 1;//y counter
+     int counterxx = 2;// second x counter
+     int counteryy = 3;// second y counter
+     counterX++;//adding 1 to the X value making it go Right
+    for(int counter = 0; counter < snakesize/2; counter++)//from 0 to snakesize/2 do this:
+    {
+        snake[xcounter] = snake[counterxx];//all code below moves the snake in the array leaving the last value empty
+        snake[ycounter] = snake[counteryy];
+        oled.pixel(snake[xcounter], snake[ycounter]);//places down a pixel for the snake
+        counterxx = (counterxx + 2);
+        counteryy = (counteryy + 2);
+        xcounter = (xcounter + 2);
+        ycounter = (ycounter + 2);
+    }
+     snake[snakesize-2] = counterX;//this fills the last value of the snake
+     snake[snakesize-1] = counterY;
+     oled.display();//display the snake 
+     delay(100);
+   }//end of right movement
+
+   if (LeftGo == true)//start of snake left movement and same concept as Right movement
+   {
+     RightGo = false;
+     LeftGo = true;
+     DownGo = false;
+     UpGo = false;
+    if (counterX == RandomX && counterY == RandomY)
+    {
+        RandomX = random(65);
+        RandomY = random(45);
+        food();
+    } 
+     int xcounter = 0;
+     int ycounter = 1;
+     int counterxx = 2;
+     int counteryy = 3;
+     counterX--;
+    for(int counter = 0; counter < snakesize/2; counter++)
+    {
+        snake[xcounter] = snake[counterxx];
+        snake[ycounter] = snake[counteryy];
+        oled.pixel(snake[xcounter], snake[ycounter]);
+        counterxx = (counterxx + 2);
+        counteryy = (counteryy + 2);
+        xcounter = (xcounter + 2);
+        ycounter = (ycounter + 2);
+    }
+     snake[snakesize-2] = counterX;
+     snake[snakesize-1] = counterY;
+     oled.display();
+     delay(100);
+   }//end of snake left movement
+
+   if (UpGo == true)//start of up snake movement and same concept as Right movement
+   {
+     RightGo = false;
+     LeftGo = false;
+     DownGo = false;
+     UpGo = true;
+    if (counterX == RandomX && counterY == RandomY)
+    {
+        RandomX = random(65);
+        RandomY = random(45);
+        food();
+    } 
+     int xcounter = 0;
+     int ycounter = 1;
+     int counterxx = 2;
+     int counteryy = 3;
+     counterY--;
+    for(int counter = 0; counter < snakesize/2; counter++)
+    {
+        snake[xcounter] = snake[counterxx];
+        snake[ycounter] = snake[counteryy];
+        oled.pixel(snake[xcounter], snake[ycounter]);
+        counterxx = (counterxx + 2);
+        counteryy = (counteryy + 2);
+        xcounter = (xcounter + 2);
+        ycounter = (ycounter + 2);
+    }
+     snake[snakesize-2] = counterX;
+     snake[snakesize-1] = counterY;
+     oled.display();
+     delay(100);
+   }//end of Up snake movement
+
+   if (DownGo == true)//start of snake down movement and same concept as Right movement
+   {
+     RightGo = false;
+     LeftGo = false;
+     DownGo = true;
+     UpGo = false;
+    if (counterX == RandomX && counterY == RandomY)
+    {
+        RandomX = random(65);
+        RandomY = random(45);
+        food();
+    } 
+     int xcounter = 0;
+     int ycounter = 1;
+     int counterxx = 2;
+     int counteryy = 3;
+     counterY++;
+    for(int counter = 0; counter < snakesize/2; counter++)
+    {
+        snake[xcounter] = snake[counterxx];
+        snake[ycounter] = snake[counteryy];
+        oled.pixel(snake[xcounter], snake[ycounter]);
+        counterxx = (counterxx + 2);
+        counteryy = (counteryy + 2);
+        xcounter = (xcounter + 2);
+        ycounter = (ycounter + 2);
+    }
+     snake[snakesize-2] = counterX;
+     snake[snakesize-1] = counterY;
+     oled.display();
+     delay(100);
+   }//end of snake down movement
+ }//end of snake code as well
+ else//if you have 0 lives
+ gameover = 1;//sets the counter gameover to 1
+   
+ if (gameover == 1)//if gameover counter is equal to 1 it will do the end scene
+ {
+   //gameover
+   oled.clear(!ALL);//clears last screen
+   oled.setCursor(0, 0);//sets cursor at (0, 0)
+   oled.setFontType(1);// Set the text to medium (6 columns, 3 rows worth of characters)
+   oled.print("  Game   Over");// Print a const string saying Game Over
+   oled.display(); //Draw to the screen
+   delay(3000);//delay long enough for them to read screen
+   oled.clear(!ALL);//clears last screen
+   oled.setFontType(1);// Set the text to medium (6 columns, 3 rows worth of characters)
+   oled.setCursor(0, 0);//sets cursor at 0,0
+   oled.print(" Score:  ");//Print a const string of the Score
+   oled.print(snakesize);//Print a const string of the size of the snake which is your score
+   oled.display(); // Draw to the screen
+   delay(3000);//long enough delay to see the score
+   oled.clear(ALL);//clears last screen
+   startgame = 0;//the rest below is resetting the whole game back to the original values to play the snake game again!
+   gameover = 0;
+   counterRight = 0;
+   counterLeft = 0;
+   counterDown = 0;
+   counterUp = 0;
+   RightGo = false;
+   LeftGo = false;
+   DownGo = false;
+   UpGo = false;
+   snakesize = 12;
+   counterX = 24;
+   counterY = 37;
+   lives = 3;   
+   int temp[snakesize];
+      for(int counter = 0; counter < (snakesize); counter++)//this resets the snake array so that it is clear
+      {
+          snake[counter] = temp[counter];
+      }
+   
+ }
+ 
+}//end loop();//final end of the code and game hope you enjoy.
+
